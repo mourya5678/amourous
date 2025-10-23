@@ -1,0 +1,25 @@
+{
+  "type": "mysql",
+  "host": "3.133.126.95",
+  "port": 3306,
+  "username": "amorous",
+  "password": "Amorous0410!!",
+  "database": "amorous_dating_app",
+  "synchronize": true,
+  "migrationsRun": true,
+  "logging": false,
+  "entities": [
+    "src/entities/**/*.js"
+  ],
+  "migrations": [
+    "src/migrations/**/*.js"
+  ],
+  "subscribers": [
+    "src/subscribers/**/*.js"
+  ],
+  "cli": {
+    "entitiesDir": "src/models",
+    "migrationsDir": "src/migrations",
+    "subscribersDir": "src/subscribers"
+  }
+}

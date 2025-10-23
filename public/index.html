@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        #typing-status {
+            font-style: italic;
+            color: gray;
+        }
+
+        #messages {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        #input {
+            width: 80%;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Chat Application</h1>
+    <div id="status" style="font-weight: bold;">User Status: Offline</div> <!-- Status section -->
+    <div id="unread-count" style="color: blue; font-weight: bold;"></div> <!-- Unread message count section -->
+    <div id="typing-status"></div> <!-- Typing status section -->
+    <ul id="messages"></ul>
+    <form id="form" action="">
+        <input id="input" autocomplete="off" placeholder="Type a message..." /><button>Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('https://3.133.126.95:4000/', {
+            extraHeaders: {
+                'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjgxLCJlbWFpbCI6Im16NkB5b3BtYWlsLmNvbSIsImlhdCI6MTc0NTgyNDExNywiZXhwIjoxNzQ4NTAyNTE3fQ.HORJsgXBbUezrjoKIIo3dQAh7it8gPdx5JB4ZXngW0s`,
+            }
+        });
+
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const messages = document.getElementById('messages');
+        const statusElement = document.getElementById('status');
+        const unreadCountElement = document.getElementById('unread-count');
+        const typingStatusElement = document.getElementById('typing-status');
+
+        const studentId = 81;
+        const teacherId = 55;
+        const roomId = `${studentId}-${teacherId}`;
+
+        socket.emit('join_room', { roomId });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const message = input.value.trim();
+            if (message) {
+                let data = {
+                    user_2_id: teacherId,
+                    content: sanitizeInput(message),
+                };
+                console.log(data, "data");
+
+                socket.emit('send_message', data);
+                input.value = '';
+            }
+        });
+
+        socket.on('send_message', function (msg) {
+            const item = document.createElement('li');
+            item.textContent = msg.content;
+            messages.appendChild(item);
+            scrollToBottom();
+        });
+
+        socket.on('update_chat_list', function (msg) {
+            socket.emit('get_chat_list');
+            scrollToBottom();
+        });
+
+        socket.on('chat_list', function (msg) {
+            const item = document.createElement('p');
+            item.textContent = JSON.stringify(msg, null, 2);
+            messages.appendChild(item);
+            scrollToBottom();
+        });
+
+
+        socket.on('user-status-change', function (status) {
+            const { userId, connect_type, is_online, last_seen } = status;
+            if (userId === teacherId) {
+                if (is_online) {
+                    statusElement.textContent = `User Status ${connect_type}: Online`;
+                    statusElement.style.color = "green";
+                } else {
+                    statusElement.textContent = `User Status ${connect_type}: Offline (Last seen: ${new Date(last_seen).toLocaleTimeString()})`;
+                    statusElement.style.color = "red";
+                }
+            }
+        });
+
+        socket.on('unread-message-count', function (data) {
+            const { chatId, unreadCount } = data;
+            if (chatId === parseInt(roomId.split('-').join(''))) {
+                unreadCountElement.textContent = `Unread Messages: ${unreadCount}`;
+            }
+        });
+
+        socket.on('typing_event', function () {
+            typingStatusElement.textContent = 'User is typing...';
+        });
+
+        socket.on('stop_typing_event', function () {
+            typingStatusElement.textContent = '';
+        });
+
+
+        socket.on('socket-error', function (error) {
+            console.error('Socket error:', error.message);
+            alert('A socket error occurred. Please try again later.');
+        });
+
+        function scrollToBottom() {
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function sanitizeInput(input) {
+            const element = document.createElement('div');
+            element.innerText = input;
+            return element.innerHTML;
+        }
+
+    </script>
+</body>
+
+</html>
